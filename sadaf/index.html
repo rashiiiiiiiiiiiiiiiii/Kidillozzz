@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Habitly — Precision Habit Tracking & Gamified Operating System</title>
+  <meta name="description" content="Habitly is a high-performance, gamified habit tracker and daily activity command center built with React, TypeScript, and modern telemetry.">
+  
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Main Stylesheet -->
+  <link rel="stylesheet" href="./src/styles/main.css">
+
+  <!-- High-Speed Production React 18 (Loads in milliseconds) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+  <div id="root">
+    <!-- Instant Fallback Skeleton -->
+    <div style="height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #06040a; color: #d4ff00; font-family: 'Outfit', sans-serif;">
+      <div style="width: 36px; height: 36px; border: 3px solid rgba(212, 255, 0, 0.2); border-top-color: #d4ff00; border-radius: 50%; animation: spin 0.6s linear infinite; margin-bottom: 16px;"></div>
+      <div style="font-size: 18px; font-weight: 800; letter-spacing: 2px;">HABITLY PRO OS</div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <!-- Pre-Compiled Instant React 18 Application Bundle -->
+  <script src="./dist/habitly.bundle.js" defer></script>
+</body>
+</html>
