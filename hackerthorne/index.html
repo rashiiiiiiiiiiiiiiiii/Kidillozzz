@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HackerThorne | AI-Powered Hackathon Squad Finder & Collaboration Hub</title>
+    <meta name="description" content="Find the perfect hackathon teammates, fill missing squad roles, manage sprint Kanban boards, and pitch winning projects with AI smart-matching.">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="./index.css">
+</head>
+<body data-theme-accent="indigo">
+    <!-- App Container -->
+    <div id="app" class="app-container">
+        <!-- Top Navigation -->
+        <header class="navbar" id="main-nav">
+            <div class="nav-brand" id="brand-home" role="button" tabindex="0" title="HackerThorne Home">
+                <div class="brand-icon">
+                    <span class="icon-sparkle">⚡</span>
+                </div>
+                <div class="brand-text">
+                    <span class="brand-title">HACKER<span class="brand-highlight">THORNE</span></span>
+                    <span class="brand-tagline">Squad Match & Collab</span>
+                </div>
+            </div>
+
+            <nav class="nav-links" aria-label="Main Navigation">
+                <button class="nav-tab active" data-view="projects" id="tab-projects" title="Shortcut: Press 1">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1"/><rect x="8" y="2" width="14" height="14" rx="2"/><path d="M12 12h6"/><path d="M15 9v6"/></svg>
+                    <span>Squads</span>
+                </button>
+                <button class="nav-tab" data-view="students" id="tab-students" title="Shortcut: Press 2">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    <span>Talent</span>
+                </button>
+                <button class="nav-tab" data-view="matchmaker" id="tab-matchmaker" title="Shortcut: Press 3">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                    <span>AI Builder</span>
+                    <span class="nav-badge pulse">AI</span>
+                </button>
+                <button class="nav-tab" data-view="copilot" id="tab-copilot" title="Shortcut: Press 4">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    <span>AI Copilot</span>
+                    <span class="nav-badge badge-new">New</span>
+                </button>
+                <button class="nav-tab" data-view="applications" id="tab-applications" title="Shortcut: Press 5">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+                    <span>Inbox</span>
+                    <span class="nav-counter" id="inbox-badge-count">2</span>
+                </button>
+                <button class="nav-tab" data-view="chat" id="tab-chat" title="Shortcut: Press 6">
+                    <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                    <span>Chat</span>
+                    <span class="nav-counter active" id="chat-badge-count">2</span>
+                </button>
+            </nav>
+
+            <div class="nav-actions">
+                <button class="btn btn-primary" id="btn-open-create-project" title="Launch new project">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                    <span>Create</span>
+                </button>
+
+                <!-- Current User Switcher -->
+                <div class="user-perspective-selector" title="Switch acting student identity">
+                    <div class="user-select-box">
+                        <img id="current-user-avatar" class="avatar-small" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80" alt="Current User">
+                        <select id="active-user-select" class="user-select-dropdown" aria-label="Select acting user perspective">
+                            <!-- Populated dynamically -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="nav-utilities">
+                    <!-- Accent Theme Selector -->
+                    <div class="theme-accent-picker" title="Change theme accent">
+                        <button class="accent-dot active" data-accent="indigo" style="background:#6366f1;" title="Electric Indigo"></button>
+                        <button class="accent-dot" data-accent="cyan" style="background:#06b6d4;" title="Cyber Cyan"></button>
+                        <button class="accent-dot" data-accent="emerald" style="background:#10b981;" title="Emerald Neon"></button>
+                        <button class="accent-dot" data-accent="amber" style="background:#f59e0b;" title="Sunset Amber"></button>
+                    </div>
+
+                    <!-- Audio FX Toggle -->
+                    <button class="btn-icon" id="btn-toggle-sound" title="Toggle Audio Sound FX">
+                        <svg id="icon-sound-on" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+                        <svg id="icon-sound-off" style="display:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><line x1="1" y1="1" x2="23" y2="23"/><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>
+                    </button>
+
+                    <!-- Keyboard Help -->
+                    <button class="btn-icon" id="btn-keyboard-help" title="Keyboard Shortcuts (?)">
+                        <span style="font-weight:700; font-size:12px; font-family:var(--font-mono);">?</span>
+                    </button>
+
+                    <!-- Reset Data -->
+                    <button class="btn-icon" id="btn-reset-data" title="Reset Demo Data">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="15" height="15"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Hackathon Banner / Live Stats Header -->
+        <section class="hero-strip" id="hero-banner">
+            <div class="hero-content">
+                <div class="hero-badge">
+                    <span class="live-dot"></span>
+                    <span id="hero-live-status">Fall 2026 Hackathon Season • Active Sprint</span>
+                </div>
+                <h1 class="hero-heading">Build Your Winning Squad. Fill Missing Roles.</h1>
+                <p class="hero-subtext">Algorithmic talent matchmaking, sprint Kanban boards, and AI pitch deck generators designed specifically for high-stakes collegiate hackathons.</p>
+                
+                <!-- Live Hackathon Countdown Bar -->
+                <div class="sprint-countdown-container">
+                    <div class="countdown-label">
+                        <span class="pulse-icon">⏱</span>
+                        <span>Next Submission Deadline (HackMIT 2026):</span>
+                    </div>
+                    <div class="countdown-digits" id="live-countdown-clock">
+                        <div class="countdown-unit"><span class="number" id="cd-days">22</span><span class="label">d</span></div>
+                        <span class="sep">:</span>
+                        <div class="countdown-unit"><span class="number" id="cd-hours">14</span><span class="label">h</span></div>
+                        <span class="sep">:</span>
+                        <div class="countdown-unit"><span class="number" id="cd-mins">36</span><span class="label">m</span></div>
+                        <span class="sep">:</span>
+                        <div class="countdown-unit"><span class="number" id="cd-secs">48</span><span class="label">s</span></div>
+                    </div>
+                    <span class="badge badge-cyan" id="hackathon-phase-tag">Phase: Team Formation & Ideation</span>
+                </div>
+            </div>
+
+            <!-- Hackathon Countdowns / Interactive Tickers -->
+            <div class="hackathon-tickers">
+                <div class="ticker-card" data-filter-hackathon="HackMIT 2026" role="button" tabindex="0" title="Click to filter HackMIT projects">
+                    <div class="ticker-header">
+                        <span class="event-name">HackMIT 2026</span>
+                        <span class="badge badge-purple">In 23 Days</span>
+                    </div>
+                    <div class="ticker-stats">
+                        <span class="stat-highlight">$50,000</span>
+                        <span class="stat-lbl">Prize Pool • Cambridge, MA</span>
+                    </div>
+                    <div class="ticker-action">Filter Projects →</div>
+                </div>
+                <div class="ticker-card" data-filter-hackathon="Stanford TreeHacks 2026" role="button" tabindex="0" title="Click to filter TreeHacks projects">
+                    <div class="ticker-header">
+                        <span class="event-name">Stanford TreeHacks</span>
+                        <span class="badge badge-cyan">In 33 Days</span>
+                    </div>
+                    <div class="ticker-stats">
+                        <span class="stat-highlight">1,200+</span>
+                        <span class="stat-lbl">Hackers • Stanford, CA</span>
+                    </div>
+                    <div class="ticker-action">Filter Projects →</div>
+                </div>
+                <div class="ticker-card" data-filter-hackathon="ETHGlobal San Francisco" role="button" tabindex="0" title="Click to filter ETHGlobal SF projects">
+                    <div class="ticker-header">
+                        <span class="event-name">ETHGlobal SF</span>
+                        <span class="badge badge-emerald">In 39 Days</span>
+                    </div>
+                    <div class="ticker-stats">
+                        <span class="stat-highlight">$125,000</span>
+                        <span class="stat-lbl">Bounties • San Francisco</span>
+                    </div>
+                    <div class="ticker-action">Filter Projects →</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Dynamic Content Views -->
+        <main class="main-content">
+            <!-- VIEW 1: PROJECTS & SQUADS -->
+            <section class="view-panel active" id="view-projects">
+                <!-- Filter & Search Toolbar -->
+                <div class="toolbar">
+                    <div class="search-group">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="project-search-input" class="search-input" placeholder="Search projects by name, required skills, or tech stack... (Press / to focus)">
+                        <button class="clear-search-btn" id="btn-clear-project-search" style="display:none;" title="Clear search">&times;</button>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label" for="project-hackathon-filter">Hackathon:</label>
+                        <select id="project-hackathon-filter" class="filter-select">
+                            <option value="all">All Hackathons</option>
+                            <option value="HackMIT 2026">HackMIT 2026</option>
+                            <option value="Stanford TreeHacks 2026">Stanford TreeHacks</option>
+                            <option value="ETHGlobal San Francisco">ETHGlobal SF</option>
+                            <option value="CalHacks 11.0">CalHacks 11.0</option>
+                        </select>
+
+                        <label class="filter-label" for="project-role-filter">Needs Role:</label>
+                        <select id="project-role-filter" class="filter-select">
+                            <option value="all">Any Missing Role</option>
+                            <option value="Frontend Developer">Frontend Developer</option>
+                            <option value="UI/UX Designer">UI/UX Designer</option>
+                            <option value="Pitch / Presenter">Pitch / Presenter</option>
+                            <option value="Backend Developer">Backend Developer</option>
+                            <option value="AI / ML Developer">AI / ML Developer</option>
+                            <option value="Mobile App Developer">Mobile App Developer</option>
+                            <option value="Cloud / DevOps">Cloud / DevOps</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Cyber Dropdown Bar -->
+                <div class="filter-dropdown-container">
+                    <button class="btn-cyber-toggle" id="btn-filter-toggle">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+                        Advanced Targeting
+                        <span class="cyber-dropdown-arrow" style="font-size:10px; margin-left: 6px;">▼</span>
+                    </button>
+                    
+                    <div class="filter-dropdown-menu" id="cyber-dropdown-menu">
+                        <!-- Filters Column -->
+                        <div class="cyber-col">
+                            <div class="cyber-col-title">FILTERS</div>
+                            <div class="cyber-filter-list" id="project-filter-chips">
+                                <button class="cyber-btn active" data-project-filter="all" id="pf-all">
+                                    [SYS.ALL] SQUADS <span class="cyber-count" id="pf-count-all">—</span>
+                                </button>
+                                <button class="cyber-btn" data-project-filter="my-squads" id="pf-my-squads">
+                                    [USR.NET] MY SQUADS <span class="cyber-count" id="pf-count-my-squads">—</span>
+                                </button>
+                                <button class="cyber-btn" data-project-filter="needs-roles" id="pf-needs-roles">
+                                    [ACT.REQ] RECRUITING <span class="cyber-count" id="pf-count-needs-roles">—</span>
+                                </button>
+                                <button class="cyber-btn" data-project-filter="high-match" id="pf-high-match">
+                                    [AI.SYNC] HIGH MATCH <span class="cyber-count" id="pf-count-high-match">—</span>
+                                </button>
+                                <button class="cyber-btn" data-project-filter="squad-full" id="pf-squad-full">
+                                    [CAP.MAX] SQUAD FULL <span class="cyber-count" id="pf-count-squad-full">—</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Sort Column -->
+                        <div class="cyber-col">
+                            <div class="cyber-col-title">SORT_BY</div>
+                            <div class="cyber-sort-list" id="project-sort-group">
+                                <button class="cyber-btn active sort-btn" data-sort="match" id="sort-match">
+                                    AI_MATCH_SCORE
+                                    <span class="sort-dir-icon">↓</span>
+                                </button>
+                                <button class="cyber-btn sort-btn" data-sort="newest" id="sort-newest">
+                                    TIMESTAMP_DESC
+                                    <span class="sort-dir-icon">↓</span>
+                                </button>
+                                <button class="cyber-btn sort-btn" data-sort="progress" id="sort-progress">
+                                    SPRINT_VELOCITY
+                                    <span class="sort-dir-icon">↓</span>
+                                </button>
+                                <button class="cyber-btn sort-btn" data-sort="squad-size" id="sort-squad-size">
+                                    CAPACITY_UTIL
+                                    <span class="sort-dir-icon">↓</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Summary Bar -->
+                <div id="projects-results-bar" class="results-summary-bar" style="display:none;"></div>
+
+                <!-- Projects Grid -->
+                <div class="cards-grid" id="projects-container">
+                    <!-- Injected by JavaScript -->
+                </div>
+            </section>
+
+            <!-- VIEW 2: TALENT NETWORK / STUDENTS -->
+            <section class="view-panel" id="view-students">
+                <div class="toolbar">
+                    <div class="search-group">
+                        <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                        <input type="text" id="student-search-input" class="search-input" placeholder="Search talent by student name, skills, major, university...">
+                        <button class="clear-search-btn" id="btn-clear-student-search" style="display:none;" title="Clear search">&times;</button>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label" for="student-role-filter">Primary Role:</label>
+                        <select id="student-role-filter" class="filter-select">
+                            <option value="all">All Disciplines</option>
+                            <option value="AI / ML Developer">AI / ML Developer</option>
+                            <option value="Frontend Developer">Frontend Developer</option>
+                            <option value="Backend Developer">Backend Developer</option>
+                            <option value="UI/UX Designer">UI/UX Designer</option>
+                            <option value="Pitch / Presenter">Pitch / Presenter</option>
+                            <option value="Mobile App Developer">Mobile App Developer</option>
+                            <option value="Cloud / DevOps">Cloud / DevOps</option>
+                        </select>
+
+                        <label class="filter-label" for="student-exp-filter">Experience:</label>
+                        <select id="student-exp-filter" class="filter-select">
+                            <option value="all">Any Experience</option>
+                            <option value="Advanced">Advanced</option>
+                            <option value="Intermediate">Intermediate</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Student Quick Chips -->
+                <div class="quick-filter-bar">
+                    <button class="quick-chip active" data-student-filter="all">All Talents</button>
+                    <button class="quick-chip" data-student-filter="bookmarked">★ Shortlisted (<span id="bookmark-count-badge">2</span>)</button>
+                    <button class="quick-chip" data-student-filter="advanced">Advanced Hackers</button>
+                    <button class="quick-chip" data-student-filter="high-synergy">Top Synergy with My Squad</button>
+                </div>
+
+                <!-- Students Grid -->
+                <div class="cards-grid" id="students-container">
+                    <!-- Injected by JavaScript -->
+                </div>
+            </section>
+
+            <!-- VIEW 3: AI SQUAD MATCHMAKER -->
+            <section class="view-panel" id="view-matchmaker">
+                <div class="matchmaker-container">
+                    <div class="matchmaker-header">
+                        <div class="ai-badge-large">
+                            <span>✨ HackerThorne Autonomous Engine</span>
+                        </div>
+                        <h2>Autonomous Squad Assembler</h2>
+                        <p>Select any active hackathon project to run multi-variable synergy calculations across all available student talents, role coverage, time availability, and past hackathon achievements.</p>
+                    </div>
+
+                    <div class="matchmaker-controls">
+                        <div class="control-box">
+                            <label for="matchmaker-project-select">Target Hackathon Project:</label>
+                            <select id="matchmaker-project-select" class="matchmaker-select">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <button class="btn btn-ai-pulse" id="btn-run-matchmaker">
+                            <span>⚡ Run Synergy Analysis & Auto-Roster</span>
+                        </button>
+                    </div>
+
+                    <!-- AI Results Section -->
+                    <div class="matchmaker-results" id="matchmaker-results">
+                        <!-- Populated dynamically -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 4: AI PITCH COPILOT & BLUEPRINTS (NEW) -->
+            <section class="view-panel" id="view-copilot">
+                <div class="copilot-container">
+                    <div class="copilot-hero">
+                        <div class="ai-badge-large">
+                            <span>💡 Hackathon AI Pitch Copilot</span>
+                        </div>
+                        <h2>Generate Winning Hackathon Blueprints & Pitch Decks</h2>
+                        <p>Stuck on ideation or need a compelling demo story? Generate battle-tested project concepts tailored to hackathon tracks, complete with 3-minute pitch flows, tech stacks, and judge rubrics.</p>
+                    </div>
+
+                    <!-- Blueprint Generator Controls -->
+                    <div class="copilot-controls">
+                        <div class="copilot-input-box">
+                            <label for="copilot-track-select">Select Hackathon Track:</label>
+                            <select id="copilot-track-select" class="filter-select">
+                                <option value="all">All Innovation Tracks</option>
+                                <option value="AI & Education">AI & Education / Student Life</option>
+                                <option value="HealthTech & Social Impact">HealthTech & Social Impact</option>
+                                <option value="Web3 & Digital Identity">Web3 & Digital Identity</option>
+                                <option value="Sustainability & Climate">Sustainability & Climate</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary" id="btn-generate-custom-idea">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                            <span>Spark Random Winning Concept</span>
+                        </button>
+                    </div>
+
+                    <!-- Blueprints Grid -->
+                    <div class="blueprints-grid" id="blueprints-container">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW 5: APPLICATIONS & REQUESTS -->
+            <section class="view-panel" id="view-applications">
+                <div class="inbox-header">
+                    <h2>Squad Applications & Team Invitations</h2>
+                    <p>Review incoming requests from students wanting to join your projects and keep track of invitations you've sent.</p>
+                </div>
+
+                <div class="inbox-subtabs">
+                    <button class="subtab-btn active" data-subtab="incoming" id="subtab-incoming">
+                        <span>Incoming Applications</span>
+                        <span class="subtab-badge" id="incoming-count">2</span>
+                    </button>
+                    <button class="subtab-btn" data-subtab="outgoing" id="subtab-outgoing">
+                        <span>Sent Invitations</span>
+                        <span class="subtab-badge" id="outgoing-count">1</span>
+                    </button>
+                </div>
+
+                <div class="requests-list" id="requests-container">
+                    <!-- Injected dynamically -->
+                </div>
+            </section>
+
+            <!-- VIEW 6: TEAM CHAT & DMS -->
+            <section class="view-panel" id="view-chat">
+                <div class="chat-layout">
+                    <!-- Chat Sidebar -->
+                    <aside class="chat-sidebar">
+                        <div class="chat-sidebar-header">
+                            <h3>Conversations</h3>
+                            <button class="btn-icon-sm" id="btn-quick-standup" title="Post Quick Standup Update">
+                                <span>📋</span>
+                            </button>
+                        </div>
+
+                        <div class="chat-channel-group">
+                            <div class="group-title">PROJECT SQUADS</div>
+                            <div class="chat-channels-list" id="project-chats-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+
+                        <div class="chat-channel-group">
+                            <div class="group-title">DIRECT MESSAGES</div>
+                            <div class="chat-channels-list" id="dm-chats-list">
+                                <!-- Populated by JS -->
+                            </div>
+                        </div>
+                    </aside>
+
+                    <!-- Chat Active Area -->
+                    <div class="chat-main" id="chat-window">
+                        <div class="chat-active-header" id="chat-header">
+                            <!-- Injected by JS -->
+                        </div>
+
+                        <div class="chat-messages-scroll" id="chat-messages">
+                            <!-- Injected by JS -->
+                        </div>
+
+                        <!-- Typing Indicator Box -->
+                        <div class="chat-typing-indicator" id="chat-typing-bar" style="display:none;">
+                            <span class="typing-dot"></span>
+                            <span class="typing-dot"></span>
+                            <span class="typing-dot"></span>
+                            <span class="typing-text" id="typing-username">Teammate is typing...</span>
+                        </div>
+
+                        <!-- Chat Quick Slash Bar -->
+                        <div class="chat-slash-tips">
+                            <span>Quick Commands:</span>
+                            <button type="button" class="slash-chip" data-cmd="/standup">/standup</button>
+                            <button type="button" class="slash-chip" data-cmd="/task ">/task [title]</button>
+                            <button type="button" class="slash-chip" data-cmd="/beacon">/beacon</button>
+                        </div>
+
+                        <form class="chat-input-bar" id="chat-form">
+                            <input type="text" id="chat-input" class="chat-input" placeholder="Type a message or use /task, /standup..." autocomplete="off">
+                            <button type="submit" class="btn btn-primary" id="btn-send-chat">
+                                <span>Send</span>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- MODAL: PROJECT DETAIL & SQUAD SPRINT HUB (EXPANDED WITH KANBAN & RUBRIC) -->
+        <div class="modal-backdrop" id="project-detail-modal" style="display: none;" role="dialog" aria-modal="true">
+            <div class="modal-card modal-xl">
+                <div class="modal-header">
+                    <div class="modal-header-info">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                            <span class="badge badge-purple" id="modal-project-hackathon">HackMIT 2026</span>
+                            <span class="badge badge-cyan" id="modal-project-track">Track</span>
+                            <span class="badge badge-emerald" id="modal-project-status">Active</span>
+                        </div>
+                        <h2 id="modal-project-title" style="margin-top:4px;">Smart Campus Assistant</h2>
+                    </div>
+                    <button class="modal-close-btn" id="btn-close-project-modal" aria-label="Close modal">&times;</button>
+                </div>
+
+                <!-- Squad Hub Sub-Navigation -->
+                <div class="hub-tabs">
+                    <button class="hub-tab-btn active" data-hub-tab="roster" id="hub-tab-roster">
+                        <span>👥 Squad Roster & Matches</span>
+                    </button>
+                    <button class="hub-tab-btn" data-hub-tab="kanban" id="hub-tab-kanban">
+                        <span>📋 Sprint Kanban Board</span>
+                    </button>
+                    <button class="hub-tab-btn" data-hub-tab="rubric" id="hub-tab-rubric">
+                        <span>🏆 Demo Day Rubric & Readiness</span>
+                    </button>
+                    <button class="hub-tab-btn" data-hub-tab="devpost" id="hub-tab-devpost">
+                        <span>🚀 Devpost Export</span>
+                    </button>
+                </div>
+
+                <div class="modal-body" id="modal-project-body">
+                    <!-- Populated dynamically based on active hub tab -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: CANDIDATE DOSSIER / FULL PROFILE (NEW) -->
+        <div class="modal-backdrop" id="candidate-modal" style="display: none;" role="dialog" aria-modal="true">
+            <div class="modal-card modal-lg">
+                <div class="modal-header">
+                    <h2 id="candidate-modal-title">Student Talent Dossier</h2>
+                    <button class="modal-close-btn" id="btn-close-candidate-modal" aria-label="Close modal">&times;</button>
+                </div>
+                <div class="modal-body" id="candidate-modal-body">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- MODAL: CREATE PROJECT -->
+        <div class="modal-backdrop" id="create-project-modal" style="display: none;" role="dialog" aria-modal="true">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2>Launch New Hackathon Project</h2>
+                    <button class="modal-close-btn" id="btn-close-create-modal" aria-label="Close modal">&times;</button>
+                </div>
+                <form class="modal-body form-grid" id="create-project-form">
+                    <div class="form-group full-width">
+                        <label for="new-project-title">Project Title *</label>
+                        <input type="text" id="new-project-title" required placeholder="e.g. NeuroSync - BCI Focus Tracker">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="new-project-tagline">One-Sentence Elevator Pitch *</label>
+                        <input type="text" id="new-project-tagline" required placeholder="e.g. Real-time EEG brainwave feedback system for neurodivergent students">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new-project-hackathon">Hackathon *</label>
+                        <select id="new-project-hackathon" required>
+                            <option value="HackMIT 2026">HackMIT 2026</option>
+                            <option value="Stanford TreeHacks 2026">Stanford TreeHacks 2026</option>
+                            <option value="ETHGlobal San Francisco">ETHGlobal San Francisco</option>
+                            <option value="CalHacks 11.0">CalHacks 11.0</option>
+                            <option value="PennApps XXV">PennApps XXV</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new-project-track">Track / Category *</label>
+                        <input type="text" id="new-project-track" required placeholder="e.g. HealthTech, AI / ML, Web3">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new-project-commitment">Time Commitment</label>
+                        <input type="text" id="new-project-commitment" value="20 hrs/week" placeholder="e.g. 20 hrs/week">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="new-project-deadline">Event Date / Deadline</label>
+                        <input type="text" id="new-project-deadline" value="Oct 20, 2026" placeholder="e.g. Oct 20, 2026">
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="new-project-description">Detailed Project Description & Goals *</label>
+                        <textarea id="new-project-description" rows="3" required placeholder="Explain your concept, current stage, and the solution you want to present on demo day..."></textarea>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label>Roles Needed in Squad (Select all that apply):</label>
+                        <div class="checkbox-role-grid" id="new-project-roles">
+                            <label class="role-chip-choice"><input type="checkbox" name="role" value="Frontend Developer" checked> Frontend Developer</label>
+                            <label class="role-chip-choice"><input type="checkbox" name="role" value="UI/UX Designer" checked> UI/UX Designer</label>
+                            <label class="role-chip-choice"><input type="checkbox" name="role" value="Pitch / Presenter" checked> Pitch / Presenter</label>
+                            <label class="role-chip-choice"><input type="checkbox" name="role" value="Backend Developer"> Backend Developer</label>
+                            <label class="role-chip-choice"><input type="checkbox" name="role" value="AI / ML Developer"> AI / ML Developer</label>
+                            <label class="role-chip-choice"><input type="checkbox" name="role" value="Mobile App Developer"> Mobile App Developer</label>
+                            <label class="role-chip-choice"><input type="checkbox" name="role" value="Cloud / DevOps"> Cloud / DevOps</label>
+                        </div>
+                    </div>
+
+                    <div class="form-group full-width">
+                        <label for="new-project-skills">Key Tech Stack / Skills (comma separated)</label>
+                        <input type="text" id="new-project-skills" placeholder="React, Python, FastAPI, Figma, TailwindCSS">
+                    </div>
+
+                    <div class="modal-footer full-width">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-create">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Publish Project & Open Recruitment</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: APPLICATION / INVITATION SUBMIT -->
+        <div class="modal-backdrop" id="apply-modal" style="display: none;" role="dialog" aria-modal="true">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2 id="apply-modal-title">Apply to Squad</h2>
+                    <button class="modal-close-btn" id="btn-close-apply-modal" aria-label="Close modal">&times;</button>
+                </div>
+                <form class="modal-body" id="apply-form">
+                    <p class="modal-subtitle" id="apply-modal-desc">Send your application note to the project lead.</p>
+                    
+                    <div class="form-group">
+                        <label for="apply-role-select">Select Role you are Applying / Inviting for:</label>
+                        <select id="apply-role-select" class="filter-select" required>
+                            <!-- Injected -->
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="apply-note">Personal Note / Pitch:</label>
+                        <textarea id="apply-note" rows="4" required placeholder="Describe your experience, relevant past hackathons, and what you can build for this squad..."></textarea>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="btn-cancel-apply">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-apply">Submit Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- MODAL: KEYBOARD SHORTCUTS REFERENCE (NEW) -->
+        <div class="modal-backdrop" id="keyboard-modal" style="display: none;" role="dialog" aria-modal="true">
+            <div class="modal-card">
+                <div class="modal-header">
+                    <h2>⌨️ Keyboard Shortcuts</h2>
+                    <button class="modal-close-btn" id="btn-close-keyboard-modal" aria-label="Close modal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="shortcut-list">
+                        <div class="shortcut-row"><kbd>1</kbd> <span>Squads & Projects View</span></div>
+                        <div class="shortcut-row"><kbd>2</kbd> <span>Talent Network View</span></div>
+                        <div class="shortcut-row"><kbd>3</kbd> <span>AI Squad Builder</span></div>
+                        <div class="shortcut-row"><kbd>4</kbd> <span>AI Pitch Copilot</span></div>
+                        <div class="shortcut-row"><kbd>5</kbd> <span>Inbox & Requests</span></div>
+                        <div class="shortcut-row"><kbd>6</kbd> <span>Team Chat</span></div>
+                        <div class="shortcut-row"><kbd>/</kbd> <span>Focus Search Input</span></div>
+                        <div class="shortcut-row"><kbd>Esc</kbd> <span>Close Active Modal</span></div>
+                        <div class="shortcut-row"><kbd>?</kbd> <span>Open this help dialog</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Toast Notifications Container -->
+        <div class="toast-container" id="toast-container" aria-live="polite"></div>
+    </div>
+
+    <!-- Application Script -->
+    <script type="module" src="./app.js"></script>
+</body>
+</html>
