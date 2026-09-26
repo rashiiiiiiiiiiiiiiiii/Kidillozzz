@@ -1,0 +1,526 @@
+================================================================================
+SMART CAMPUS PLATFORM — DEVELOPER HANDOVER & FEATURE INCLUSION GUIDE
+================================================================================
+Generated: September 2026
+Target Audience: Engineering Teams implementing feature modules (Attendance,
+                 Complaints/Grievances, Events, Grading, Library, etc.)
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. PLATFORM ARCHITECTURE & CURRENT STATE
+2. BACKEND MODULE PLUG-IN PATTERN (HOW TO ADD AN API MODULE)
+3. DATABASE CONVENTIONS & MIGRATIONS
+4. NOTIFICATIONS INTEGRATION (SHARED DISPATCH BUS)
+5. FRONTEND INTEGRATION & DESIGN SYSTEM USAGE
+6. STEP-BY-STEP WALKTHROUGH: ADDING A NEW FEATURE (EXAMPLE: ATTENDANCE)
+7. ENVIRONMENT VARIABLES & CREDENTIALS
+8. CODE REVIEW CHECKLIST FOR NEW MODULES
+
+================================================================================
+1. PLATFORM ARCHITECTURE & CURRENT STATE
+================================================================================
+
+The Smart Campus backbone is fully scaffolded, verified, and running.
+
+TECH STACK:
+- Frontend:   React 18 (Vite), React Router v6, Axios (auto JWT attach & refresh)
+- Backend:    Node.js + Express 4
+- Database:   PostgreSQL 17 (Supabase cloud pooler, SSL enabled, IPv4 supported)
+- Cache:      Redis (ioredis with resilient offline fallback handling)
+- Auth:       JWT (15-min Access Token, 7-day Refresh Token stored in DB)
+- Roles:      'student', 'faculty', 'admin'
+
+KEY DIRECTORY ROOTS:
+  smart-campus/
+  ├── client/                     --> React frontend
+  │   ├── src/
+  │   │   ├── api/axios.js        --> Pre-configured Axios with interceptors
+  │   │   ├── components/         --> Navbar, Sidebar, Layout, ProtectedRoute
+  │   │   ├── context/            --> AuthContext, ToastContext
+  │   │   ├── hooks/              --> useAuth, useToast
+  │   │   ├── modules/            --> PLACE NEW FRONTEND FEATURE FOLDERS HERE
+  │   │   ├── pages/              --> Login, Register, Notifications, Users
+  │   │   │   └── dashboard/      --> Student, Faculty, Admin dashboards
+  │   │   ├── App.jsx             --> Master route registry
+  │   │   └── index.css           --> Maximalist Black & Yellow design system
+  │
+  ├── server/                     --> Express backend
+  │   ├── config/                 --> db.js (pg Pool), redis.js, env.js
+  │   ├── db/
+  │   │   ├── migrations/         --> SQL migration files (001_init.sql, etc.)
+  │   │   └── migrate.js          --> Node-based migration runner (no psql needed)
+  │   ├── middleware/             --> auth.js (JWT verify), authorize.js (RBAC)
+  │   ├── modules/                --> PLACE NEW BACKEND FEATURE FOLDERS HERE
+  │   │   ├── auth/               --> Register, login, refresh, logout, me
+  │   │   ├── users/              --> Admin user directory and deletion
+  │   │   └── notifications/      --> Notification list, unread count, mark-read
+  │   ├── utils/                  --> ApiError.js, jwt.js
+  │   ├── app.js                  --> Route mounting & global middleware
+  │   └── server.js               --> Server entry point (port 5000)
+  │
+  └── .env                        --> Environment variables (DB, Redis, JWT)
+
+================================================================================
+2. BACKEND MODULE PLUG-IN PATTERN (HOW TO ADD AN API MODULE)
+================================================================================
+
+Every feature module MUST live in its own directory under `server/modules/<feature>/`
+using the isolated 3-file pattern:
+
+  server/modules/<feature>/
+  ├── <feature>.service.js      --> Database queries, business logic, transactions
+  ├── <feature>.controller.js   --> Request validation, status codes, next(err)
+  └── <feature>.routes.js       --> Route definitions and middleware binding
+
+RULES FOR BACKEND MODULES:
+1. DO NOT write raw database queries inside controllers. Put them in .service.js.
+2. ALWAYS use the shared database pool:
+     const db = require('../../config/db');
+     const result = await db.query('SELECT * FROM my_table WHERE id = $1', [id]);
+3. ALWAYS throw ApiError for predictable HTTP error responses:
+     const ApiError = require('../../utils/ApiError');
+     throw ApiError.notFound('Resource not found');
+     throw ApiError.forbidden('You do not own this resource');
+     throw ApiError.badRequest('Invalid date range');
+4. PROTECT routes with the shared auth middleware:
+     const auth = require('../../middleware/auth');
+     const authorize = require('../../middleware/authorize');
+
+     // Any logged-in user:
+     router.get('/', auth, controller.getAll);
+
+     // Only faculty or admin:
+     router.post('/', auth, authorize('faculty', 'admin'), controller.create);
+
+     // Only students:
+     router.post('/check-in', auth, authorize('student'), controller.checkIn);
+
+5. MOUNT the module in `server/app.js` with ONE line:
+     // Inside server/app.js under API routes:
+     app.use('/api/<feature>', require('./modules/<feature>/<feature>.routes'));
+
+================================================================================
+3. DATABASE CONVENTIONS & MIGRATIONS
+================================================================================
+
+The database is PostgreSQL 17 on Supabase with the "pgcrypto" extension enabled.
+
+CONVENTIONS FOR ALL NEW TABLES:
+1. Primary Keys: Use UUIDs with `DEFAULT gen_random_uuid()`:
+     id UUID PRIMARY KEY DEFAULT gen_random_uuid()
+2. User Foreign Keys: Always reference `users(id)`:
+     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE
+3. Timestamps: Always use timezone-aware timestamps:
+     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+     updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+4. Indexes: Index all foreign keys and frequently filtered columns:
+     CREATE INDEX idx_<table_name>_<column> ON <table_name>(<column>);
+
+HOW TO RUN MIGRATIONS:
+1. Create a new SQL file under `server/db/migrations/`, e.g. `002_<feature>.sql`.
+2. To run it, either execute it in the Supabase SQL Web Editor OR append it to
+   `server/db/migrate.js` and run:
+     cd server
+     npm run migrate
+
+================================================================================
+4. NOTIFICATIONS INTEGRATION (SHARED DISPATCH BUS)
+================================================================================
+
+The platform has a centralized `notifications` table shared across all modules.
+When your feature triggers an event (e.g. attendance marked, complaint updated,
+event announced), dispatch a notification using the built-in helper:
+
+In `server/modules/<feature>/<feature>.service.js`:
+
+  const { createNotification } = require('../notifications/notifications.service');
+
+  // Inside your service function:
+  await createNotification({
+    userId: targetStudentId,
+    title: 'Attendance Confirmed: CS-402',
+    message: 'Your roll call was logged for lecture on September 26.',
+    sourceModule: 'attendance', // 'attendance' | 'complaints' | 'events' | 'grades'
+  });
+
+This automatically:
+- Inserts a record into the shared PostgreSQL `notifications` table
+- Invalidates the Redis unread count cache
+- Emits a Redis Pub/Sub event for real-time delivery
+- Instantly displays in the user's frontend notification bell and `/notifications` feed
+
+================================================================================
+5. FRONTEND INTEGRATION & DESIGN SYSTEM USAGE
+================================================================================
+
+The frontend uses Vite + React 18 with a custom Maximalist Black & Yellow
+design system defined in `client/src/index.css`.
+
+DESIGN SYSTEM RULES:
+- Primary Brand Color: High-Voltage Yellow (`var(--color-yellow)`: #fee500)
+- Background:          Deep Obsidian (`var(--color-bg)`: #07080b)
+- Card Surfaces:       `var(--color-surface-1)` (#10131a), `var(--color-surface-2)` (#161a24)
+- Borders:             `var(--color-border)` (#1e2433)
+- Typography:
+    Headings:          `font-family: var(--font-display)` (Space Grotesk)
+    Body:              `font-family: var(--font-body)` (Plus Jakarta Sans)
+    Badges/Code:       `font-family: var(--font-mono)` (JetBrains Mono)
+
+PRE-BUILT CSS UTILITY CLASSES TO USE:
+  .bento-grid          --> 12-column responsive grid container
+  .bento-col-12        --> Spans full width (12 cols)
+  .bento-col-8         --> Spans 8 cols (hero cards)
+  .bento-col-6         --> Spans 6 cols (half width)
+  .bento-col-4         --> Spans 4 cols (stat cards / side panels)
+  .bento-card          --> Base card styling with border & hover lift
+  .bento-card-featured --> Highlighted card with yellow accent top line
+  .stat-card           --> Metric card with .stat-value and .stat-label
+  .btn-primary         --> Tactile yellow brutalist button
+  .btn-secondary       --> Graphite button with border
+  .btn-ghost           --> Minimal transparent button with yellow border
+  .badge               --> Base badge tag (.badge-student, .badge-faculty, .badge-admin)
+  .input-field         --> Form inputs with glowing focus ring
+  .modal-overlay       --> Accessible backdrop blur modal
+  .modal-dialog        --> Centered popup card with header/body/footer
+  .data-table          --> High-contrast responsive data table
+
+MAKING API CALLS FROM FRONTEND:
+Use the pre-configured Axios instance (`client/src/api/axios.js`):
+  import api from '../api/axios';
+
+  // In your component:
+  const { data } = await api.get('/attendance/my-records');
+  await api.post('/attendance/check-in', { sessionCode });
+
+  // Token attachment and 401 refresh are 100% AUTOMATIC.
+  // You do NOT need to manually add Authorization headers.
+
+DISPLAYING USER FEEDBACK (TOASTS):
+Use the built-in `useToast` hook:
+  import { useToast } from '../context/ToastContext';
+
+  function MyComponent() {
+    const { addToast } = useToast();
+
+    function onActionSuccess() {
+      addToast('Record saved successfully!', 'success');
+      // Types: 'success' | 'info' | 'warning' | 'error'
+    }
+  }
+
+ACCESSING AUTHENTICATED USER DATA:
+  import { useAuth } from '../hooks/useAuth';
+
+  function MyComponent() {
+    const { user } = useAuth();
+    // user.id, user.name, user.email, user.role, user.department, user.batch, user.designation
+  }
+
+================================================================================
+6. STEP-BY-STEP WALKTHROUGH: ADDING A NEW FEATURE (EXAMPLE: ATTENDANCE)
+================================================================================
+
+Here is the exact end-to-end recipe to build and ship the "Attendance" module:
+
+--- STEP 1: CREATE DATABASE SCHEMA ---
+Create file: `server/db/migrations/002_attendance.sql`
+```sql
+CREATE TABLE IF NOT EXISTS attendance_sessions (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    faculty_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    course_code   VARCHAR(20) NOT NULL,
+    session_code  VARCHAR(10) NOT NULL,
+    is_active     BOOLEAN DEFAULT TRUE,
+    created_at    TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS attendance_records (
+    id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    session_id    UUID NOT NULL REFERENCES attendance_sessions(id) ON DELETE CASCADE,
+    student_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    verified_at   TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (session_id, student_id)
+);
+
+CREATE INDEX idx_attendance_records_student ON attendance_records(student_id);
+```
+
+--- STEP 2: CREATE BACKEND SERVICE ---
+Create file: `server/modules/attendance/attendance.service.js`
+```javascript
+const db = require('../../config/db');
+const ApiError = require('../../utils/ApiError');
+const { createNotification } = require('../notifications/notifications.service');
+
+async function createSession(facultyId, { courseCode, sessionCode }) {
+  const result = await db.query(
+    `INSERT INTO attendance_sessions (faculty_id, course_code, session_code)
+     VALUES ($1, $2, $3) RETURNING *`,
+    [facultyId, courseCode, sessionCode]
+  );
+  return result.rows[0];
+}
+
+async function markAttendance(studentId, { sessionCode }) {
+  const sessionRes = await db.query(
+    'SELECT * FROM attendance_sessions WHERE session_code = $1 AND is_active = TRUE',
+    [sessionCode]
+  );
+  if (sessionRes.rows.length === 0) {
+    throw ApiError.badRequest('Invalid or expired attendance session code');
+  }
+
+  const session = sessionRes.rows[0];
+
+  try {
+    const record = await db.query(
+      `INSERT INTO attendance_records (session_id, student_id)
+       VALUES ($1, $2) RETURNING *`,
+      [session.id, studentId]
+    );
+
+    // Notify student:
+    await createNotification({
+      userId: studentId,
+      title: 'Attendance Confirmed',
+      message: `Your roll call was recorded for ${session.course_code}.`,
+      sourceModule: 'attendance',
+    });
+
+    return record.rows[0];
+  } catch (err) {
+    if (err.code === '23505') { // Postgres unique violation
+      throw ApiError.conflict('Attendance already recorded for this session');
+    }
+    throw err;
+  }
+}
+
+async function getStudentAttendance(studentId) {
+  const result = await db.query(
+    `SELECT ar.verified_at, s.course_code
+     FROM attendance_records ar
+     JOIN attendance_sessions s ON ar.session_id = s.id
+     WHERE ar.student_id = $1
+     ORDER BY ar.verified_at DESC`,
+    [studentId]
+  );
+  return result.rows;
+}
+
+module.exports = { createSession, markAttendance, getStudentAttendance };
+```
+
+--- STEP 3: CREATE BACKEND CONTROLLER ---
+Create file: `server/modules/attendance/attendance.controller.js`
+```javascript
+const attendanceService = require('./attendance.service');
+
+async function createSession(req, res, next) {
+  try {
+    const data = await attendanceService.createSession(req.user.id, req.body);
+    res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function markAttendance(req, res, next) {
+  try {
+    const data = await attendanceService.markAttendance(req.user.id, req.body);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+async function getMyAttendance(req, res, next) {
+  try {
+    const data = await attendanceService.getStudentAttendance(req.user.id);
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = { createSession, markAttendance, getMyAttendance };
+```
+
+--- STEP 4: CREATE BACKEND ROUTES ---
+Create file: `server/modules/attendance/attendance.routes.js`
+```javascript
+const { Router } = require('express');
+const auth = require('../../middleware/auth');
+const authorize = require('../../middleware/authorize');
+const ctrl = require('./attendance.controller');
+
+const router = Router();
+
+// Faculty launches session:
+router.post('/sessions', auth, authorize('faculty', 'admin'), ctrl.createSession);
+
+// Student marks attendance:
+router.post('/check-in', auth, authorize('student'), ctrl.markAttendance);
+
+// Student views attendance history:
+router.get('/my-history', auth, authorize('student'), ctrl.getMyAttendance);
+
+module.exports = router;
+```
+
+--- STEP 5: MOUNT ROUTE IN server/app.js ---
+Open `server/app.js` and add:
+```javascript
+app.use('/api/attendance', require('./modules/attendance/attendance.routes'));
+```
+
+--- STEP 6: CREATE FRONTEND COMPONENT ---
+Create file: `client/src/modules/attendance/AttendanceView.jsx`
+```jsx
+import { useState, useEffect } from 'react';
+import api from '../../api/axios';
+import { useToast } from '../../context/ToastContext';
+
+export default function AttendanceView() {
+  const [history, setHistory] = useState([]);
+  const [code, setCode] = useState('');
+  const { addToast } = useToast();
+
+  useEffect(() => {
+    loadHistory();
+  }, []);
+
+  async function loadHistory() {
+    try {
+      const { data } = await api.get('/attendance/my-history');
+      setHistory(data.data || []);
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleCheckin(e) {
+    e.preventDefault();
+    try {
+      await api.post('/attendance/check-in', { sessionCode: code });
+      addToast('Attendance marked successfully!', 'success');
+      setCode('');
+      loadHistory();
+    } catch (err) {
+      addToast(err.response?.data?.error?.message || 'Check-in failed', 'error');
+    }
+  }
+
+  return (
+    <div className="page-container fade-in">
+      <div className="hero-banner">
+        <div>
+          <h1 className="hero-heading">Attendance <span className="yellow">Module</span></h1>
+          <p className="hero-sub">Roll call tracking and session check-in.</p>
+        </div>
+      </div>
+
+      <div className="bento-grid">
+        <div className="bento-col-4">
+          <div className="bento-card">
+            <h3 className="card-title">Check-in Session</h3>
+            <form onSubmit={handleCheckin} style={{ marginTop: '1rem' }}>
+              <input
+                className="input-field"
+                placeholder="6-digit PIN"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                required
+              />
+              <button className="btn-primary" style={{ width: '100%', marginTop: '1rem' }}>
+                Verify & Submit
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <div className="bento-col-8">
+          <div className="bento-card">
+            <h3 className="card-title">Recent Roll Calls</h3>
+            <div style={{ marginTop: '1rem' }}>
+              {history.map((h, i) => (
+                <div key={i} style={{ padding: '8px', borderBottom: '1px solid var(--color-border)' }}>
+                  <strong>{h.course_code}</strong> — {new Date(h.verified_at).toLocaleString()}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+--- STEP 7: REGISTER ROUTE IN client/src/App.jsx ---
+Import `AttendanceView` and add the route:
+```jsx
+<Route path="/attendance" element={<AttendanceView />} />
+```
+And add `{ label: '📋  Attendance', path: '/attendance', tag: 'MOD' }` to `client/src/components/Sidebar.jsx`!
+
+================================================================================
+7. ENVIRONMENT VARIABLES & CREDENTIALS
+================================================================================
+
+The production `.env` file is located at the project root (`smart-campus/.env`).
+DO NOT commit real production passwords to public version control.
+
+Key variables:
+- `PORT`:                   Backend port (Default: 5000)
+- `NODE_ENV`:               development | production
+- `DATABASE_URL`:           Supabase pooler connection string (IPv4):
+                            postgresql://postgres.wrdggimpdeownssohyzx:[PASSWORD]@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres
+- `DB_HOST`:                aws-0-ap-northeast-1.pooler.supabase.com
+- `DB_PORT`:                6543
+- `DB_NAME`:                postgres
+- `DB_USER`:                postgres.wrdggimpdeownssohyzx
+- `DB_SSL`:                 true (Mandatory for Supabase)
+- `JWT_ACCESS_SECRET`:      Secret string for 15-minute access tokens
+- `JWT_REFRESH_SECRET`:     Secret string for 7-day refresh tokens
+- `CLIENT_URL`:             Frontend dev origin (http://localhost:5173)
+
+DEFAULT SEED ADMIN CREDENTIALS:
+- Email:    admin@smartcampus.dev
+- Password: admin123
+- Role:     admin
+
+================================================================================
+8. CODE REVIEW CHECKLIST FOR NEW MODULES
+================================================================================
+
+Before submitting a Pull Request for a new feature module:
+
+[ ] 1. BACKEND ROUTE BOUND:
+       Mounted in `server/app.js` using `app.use('/api/<feature>', ...)`
+[ ] 2. AUTHENTICATION ENFORCED:
+       All protected endpoints have `auth` middleware applied.
+[ ] 3. ROLE-BASED ACCESS CONTROL (RBAC):
+       Sensitive endpoints have `authorize('role1', 'role2')` applied.
+[ ] 4. ERROR HANDLING:
+       All asynchronous controller functions are wrapped in try/catch and pass
+       errors to `next(err)`. Uses `ApiError.badRequest()`, `ApiError.notFound()`, etc.
+[ ] 5. DATABASE QUERIES PARAMETERIZED:
+       Zero string concatenation in SQL queries. Always use `$1, $2, $3` parameters
+       to prevent SQL injection vulnerabilities.
+[ ] 6. NOTIFICATION BUS WIRED:
+       Relevant actions invoke `createNotification({ userId, title, message, sourceModule })`.
+[ ] 7. FRONTEND STYLING COMPLIANT:
+       Uses existing design tokens from `index.css` (bento-grid, btn-primary,
+       badge, input-field). No ad-hoc conflicting utility frameworks.
+[ ] 8. TOASTS / FEEDBACK PRESENT:
+       Interactive forms and triggers invoke `useToast()` on success or error.
+[ ] 9. RESPONSIVE TESTED:
+       UI tested on both desktop (1440px) and mobile (< 768px).
+[ ] 10. CLEAN BUILD:
+       Ran `npm run build` in `client/` and verified 0 compile errors.
+
+================================================================================
+END OF GUIDE — HAPPY CODING!
+================================================================================
